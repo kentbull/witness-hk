@@ -41,3 +41,12 @@ This result does not yet establish hosted-process topology, three-witness
 quorum-two end-to-end acceptance, released-peer interoperability or Locksmith.
 Those remain explicit integration gates. Registration/TOTP authorization stays
 in place; the service is not converted into an unauthenticated public witness.
+
+## Process configuration
+
+A real installed `witopnet marshal start` probe found that `setup` did not pass
+the configured public host/port to `Witnessery`, and its constructor indexed a
+possibly absent config block. Local changes pass those existing parameters and
+let an absent block retain their defaults. Explicit configured curls still win.
+The new runtime test provisions via the actual boot socket and fetches the
+returned public OOBI. All 43 installed-package tests pass after this correction.

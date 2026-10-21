@@ -115,7 +115,8 @@ def setup(
     dbDoer = BaserDoer(db)
     cf = configing.Configer(name=db.name, headDirPath=headDirPath, temp=temp)
     qrycues = decking.Deck()
-    witery = Witnessery(db=db, base=base, temp=temp, qrycues=qrycues, cf=cf)
+    witery = Witnessery(db=db, base=base, temp=temp, qrycues=qrycues, cf=cf,
+                        host=host, port=port, headDirPath=headDirPath)
 
     doers = [witery]
 
@@ -257,8 +258,7 @@ class Witnessery(doing.DoDoer):
         self.port = port
 
         if self.cf is not None:
-            conf = self.cf.get()
-            conf = conf["witopnet"]
+            conf = (self.cf.get() or {}).get("witopnet", {})
             if "dt" in conf:  # datetime of config file
                 if "curls" in conf:
                     curls = conf["curls"]
