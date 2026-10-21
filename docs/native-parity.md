@@ -4,7 +4,9 @@ The base is keri-foundation/witness-hk
 `39e1c3fc76691b10417530a947df1399978ec3c5`. The Python package and binary are
 `Witopnet` and `witopnet`; this remains the hosted service, not a KLI wrapper.
 Its core dependency is pinned to Kent KERIpy
-`ae144adbadc10aa40a057d600fd4546f08275e1d`, shared with registrar/observer.
+`64b5c6afc9d23e05e3135353b3396cce28712ce8`, including released HTTP
+media-type compatibility and order-independent receipt collection. Final shared
+component-pin alignment is a separate qualification step.
 
 ## Receipt compatibility
 
@@ -50,3 +52,36 @@ possibly absent config block. Local changes pass those existing parameters and
 let an absent block retain their defaults. Explicit configured curls still win.
 The new runtime test provisions via the actual boot socket and fetches the
 returned public OOBI. All 43 installed-package tests pass after this correction.
+
+## Actual released peers and provider failure
+
+`scripts/legacy-peers/check.sh` starts the real `witopnet` binary on an isolated
+Docker network and runs `receipt.py` in unmodified KERIpy 1.2.14 and 1.3.6
+interpreters. Build those images with Dolly's pinned
+`scripts/legacy-peers/Dockerfile` (Dolly fa63e689); no Dolly application module is
+included or imported by the peer. Set `HOSTED_MATRIX_IMAGE` to a provider image
+built with this repository and the pinned core. Named volumes contain all LMDB
+state. The script retains only public outcomes on stdout; TOTP seeds are random,
+private and never printed. Docker bridge listeners are explicitly configured.
+
+The new harness is local test integration inspired by Dolly's released-peer
+isolation runner. Its HTTP envelope follows released `keri.app.httping`; its
+registration follows upstream `AidCollectionEnd`, and its TOTP calculation is
+standard RFC 6238 SHA-1 with the existing PyOTP default parameters. No protocol
+verification or accepted database writes are substituted. Both actual peers
+pass registration, unauthorized rotation refusal and verification of the exact
+indexed receipt. This exposed the old `application/cesr+json` media type; the
+shared-core correction is `64b5c6af`.
+
+KERIpy's separate `hosted-quorum-restart.sh` (71b6a366) passes with three real
+provider processes and quorum two: first-destination outage, below-quorum
+refusal, retained pending-anchor retry after provider restart and original OOBI
+recovery. The old sequential receipt collector failed before its correction.
+These are development-image integration results, not final clean-artifact or
+Locksmith UI qualification.
+
+The 43 installed-package tests pass with the updated core pin. The test image
+uses `/witness-component` so an explicitly composed base image cannot merge
+another application's tests into this suite. A first exploratory composition
+revealed that directory collision; it was not a witness protocol failure.
+The released matrix also passes using this rebuilt provider image.

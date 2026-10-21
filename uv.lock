@@ -340,7 +340,7 @@ wheels = [
 [[package]]
 name = "keri"
 version = "2.1.0.dev1"
-source = { git = "https://github.com/kentbull/keripy.git?rev=ae144adbadc10aa40a057d600fd4546f08275e1d#ae144adbadc10aa40a057d600fd4546f08275e1d" }
+source = { git = "https://github.com/kentbull/keripy.git?rev=64b5c6afc9d23e05e3135353b3396cce28712ce8#64b5c6afc9d23e05e3135353b3396cce28712ce8" }
 dependencies = [
     { name = "apispec" },
     { name = "blake3" },
@@ -928,7 +928,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
     { name = "falcon", specifier = ">=4.2.0" },
     { name = "hio", specifier = ">=0.7.19" },
-    { name = "keri", git = "https://github.com/kentbull/keripy.git?rev=ae144adbadc10aa40a057d600fd4546f08275e1d" },
+    { name = "keri", git = "https://github.com/kentbull/keripy.git?rev=64b5c6afc9d23e05e3135353b3396cce28712ce8" },
     { name = "multicommand", specifier = ">=1.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pyotp", specifier = ">=2.9.0" },
