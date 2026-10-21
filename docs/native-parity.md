@@ -85,3 +85,18 @@ uses `/witness-component` so an explicitly composed base image cannot merge
 another application's tests into this suite. A first exploratory composition
 revealed that directory collision; it was not a witness protocol failure.
 The released matrix also passes using this rebuilt provider image.
+
+## Common runtime pin and source-review boundary
+
+The additive qualification now uses KERIpy
+`993b58266992b786d044fd3938e114a19d76f62f` and this component at
+`4b58bdb21862ba6ffda1b7e249f8de04b0eb2aaa`. Earlier pins and results above are
+historical checkpoints. The package declaration and lock select the same exact
+core revision; no sibling editable source is required. The pin follow-up changes
+no application symbol or protocol policy.
+
+A fresh clone installed in the common Linux scenario image passes all 43
+component tests. The clean multi-component story matrix is recorded separately;
+a component suite alone does not establish that outcome. Existing changed-symbol
+lineage remains the application source audit, with Git history retaining the
+individual predecessor lines and contributors.
