@@ -8,6 +8,7 @@ from falcon.media.multipart import MultipartParseError
 from keri import kering, core
 from keri.app.httping import CESR_DESTINATION_HEADER
 from keri.core import coring, serdering
+from witopnet.core.framing import attachmentVersion
 
 
 def loadEnds(app, witery):
@@ -99,14 +100,16 @@ class AidCollectionEnd:
         ):  # The form works but still raises this exception so ignore for now...
             pass
 
-        # /aids KEL streams use V2 attachment framing regardless of body version.
-        # A delkel will be provided if the target KEL is a delegated AID
+        # Registration accepts legacy framing and the existing native-wrapped
+        # legacy profile. Only the ordinary parser can authenticate either.
         if delkel is not None:
-            witness.parser.parse(delkel, local=False, version=kering.Vrsn_2_0)
+            delegator = serdering.SerderKERI(raw=bytes(delkel))
+            genus = attachmentVersion(delegator, delkel[delegator.size:])
+            witness.parser.parse(delkel, local=False, version=genus)
 
         serder = serdering.SerderKERI(raw=bytes(kel))
-        # Parse the event, get the KEL in our Kevers
-        witness.parser.parseOne(ims=kel, local=False, version=kering.Vrsn_2_0)
+        genus = attachmentVersion(serder, kel[serder.size:])
+        witness.parser.parseOne(ims=kel, local=False, version=genus)
 
         if serder.pre not in witness.hab.kevers:  # Not a valid, signed inception event
             raise falcon.HTTPBadRequest(
