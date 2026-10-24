@@ -1,9 +1,0 @@
-ARG CORE_IMAGE=keripy-community:observations
-FROM ${CORE_IMAGE}
-WORKDIR /witness-component
-RUN python -m pip install pyotp==2.9.0
-COPY pyproject.toml README.md LICENSE ./
-COPY src ./src
-RUN python -m pip install --no-deps --no-build-isolation .
-COPY tests ./tests
-CMD ["python", "-m", "pytest", "-q", "-o", "pythonpath=", "tests"]
