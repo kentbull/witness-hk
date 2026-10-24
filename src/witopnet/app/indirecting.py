@@ -10,6 +10,8 @@ import datetime
 import os
 import time
 
+from witopnet.core.framing import attachmentVersion
+
 import falcon
 import pyotp
 from hio.base import doing
@@ -239,6 +241,7 @@ class HttpEnd:
         cr = httping.parseCesrHttpRequest(req=req)
 
         serder = serdering.SerderKERI(sad=cr.payload, kind=eventing.Kinds.json)
+        genus = attachmentVersion(serder, cr.attachments.encode())
         msg = bytearray(serder.raw)
         msg.extend(cr.attachments.encode("utf-8"))
 
@@ -251,14 +254,14 @@ class HttpEnd:
             if (auth := req.get_header("Authorization")) is not None and validCode(
                 scode, auth
             ):
-                witness.parser.parseOne(ims=msg, local=True, version=kering.Vrsn_2_0)
+                witness.parser.parseOne(ims=msg, local=True, version=genus)
             else:  # Otherwise this is not from a trusted source, so parse it as not "local"
                 witness.parser.parseOne(
-                    ims=msg, local=False, version=kering.Vrsn_2_0
+                    ims=msg, local=False, version=genus
                 )  # This will likely go to the misfit escrow
         else:
             witness.parser.parseOne(
-                ims=msg, local=False, version=kering.Vrsn_2_0
+                ims=msg, local=False, version=genus
             )  # This will likely go to the misfit escrow
 
         ilk = serder.ked["t"]
@@ -536,20 +539,20 @@ class ReceiptEnd:
         msg = bytearray(serder.raw)
         msg.extend(cr.attachments.encode("utf-8"))
 
-        # Mirror the receipted event's protocol version for the receipt body,
-        # but keep newly generated attachment framing on the modern CESR v2
-        # genus so clients do not need legacy attachment support
-        pvrsn = kering.deversify(serder.ked["v"]).pvrsn
-        gvrsn = kering.Vrsn_2_0
+        # Legacy peers need legacy receipt attachments. The input may still
+        # use the existing v2-wrapped legacy transport profile.
+        pvrsn = serder.pvrsn
+        gvrsn = pvrsn
+        incoming = attachmentVersion(serder, cr.attachments.encode())
 
         # Check for a one-time-password in the Authroizaiton header.  If it works, parse this as "local"
         if (auth := req.get_header("Authorization")) is not None and validCode(
             scode, auth
         ):
-            witness.parser.parseOne(ims=msg, local=True, version=pvrsn)
+            witness.parser.parseOne(ims=msg, local=True, version=incoming)
         else:  # Otherwise this is not form a trusted source, so parse it as not "local"
             witness.parser.parseOne(
-                ims=msg, local=False, version=pvrsn
+                ims=msg, local=False, version=incoming
             )  # This will likely go to the misfit escrow
 
         if pre in witness.hab.kevers and witness.hab.kevers[pre].sn == serder.sn:
@@ -562,8 +565,7 @@ class ReceiptEnd:
                     f"{serder.sn}: wits={wits}"
                 )
 
-            # Generate a receipt whose body follows the receipted event, while
-            # its attachment framing uses the v2 CESR genus
+            # Return a receipt in the controller event's protocol/genus.
             rct = witness.hab.receipt(
                 serder,
                 kind=serder.kind,
@@ -641,7 +643,7 @@ class ReceiptEnd:
             )
         # Receipt lookup reconstructs the receipt from the stored event's
         # protocol and serialization metadata so the proof matches the event it
-        # is about. We still frame any generated attachments with CESR v2
+        # is about. Match attachment genus to the stored event protocol.
         receipting = dict(pvrsn=serder.pvrsn, kind=serder.kind)
         if serder.gvrsn is not None:
             receipting["gvrsn"] = serder.gvrsn
@@ -657,7 +659,7 @@ class ReceiptEnd:
                 serder=rserder,
                 wigers=wigers,
                 framed=True,
-                gvrsn=kering.Vrsn_2_0,
+                gvrsn=serder.pvrsn,
             )
 
         rep.content_type = (
