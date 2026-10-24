@@ -20,9 +20,7 @@ from hio.core import http
 from hio.help import decking
 from keri import kering, core, help
 from keri.app import habbing, storing, forwarding, configing
-from keri.app.httping import Clienter
 from keri.app.indirecting import createHttpServer
-from keri.app.oobiing import Oobiery
 from keri.core import coring, routing, eventing, parsing
 from keri.db.basing import BaserDoer
 from keri.help import helping
@@ -32,7 +30,7 @@ from keri.vdr.eventing import Reger, Tevery
 
 from witopnet.app import indirecting, aiding
 from witopnet.app.indirecting import HttpEnd, ReceiptEnd, KeyStateEnd, KeyLogEnd
-from witopnet.core import httping, basing, oobing
+from witopnet.core import httping, basing, oobing, resourceing
 
 logger = help.ogler.getLogger()
 
@@ -136,13 +134,15 @@ def setup(
         )
     )
 
-    bootServer = createHttpServer(
-        host=bootHost,
-        port=bootPort,
-        app=bootApp,
-        keypath=keypath,
-        certpath=certpath,
-        cafilepath=cafilepath,
+    bootServer = resourceing.configureHttpServer(
+        createHttpServer(
+            host=bootHost,
+            port=bootPort,
+            app=bootApp,
+            keypath=keypath,
+            certpath=certpath,
+            cafilepath=cafilepath,
+        )
     )
     bootSrvrDoer = http.ServerDoer(server=bootServer)
 
@@ -171,13 +171,15 @@ def setup(
         )
     )
 
-    server = createHttpServer(
-        host=host,
-        port=port,
-        app=app,
-        keypath=keypath,
-        certpath=certpath,
-        cafilepath=cafilepath,
+    server = resourceing.configureHttpServer(
+        createHttpServer(
+            host=host,
+            port=port,
+            app=app,
+            keypath=keypath,
+            certpath=certpath,
+            cafilepath=cafilepath,
+        )
     )
     srvrDoer = http.ServerDoer(server=server)
 
@@ -499,8 +501,8 @@ class Witness(doing.DoDoer):
         exchanger = exchanging.Exchanger(hby=hby, handlers=[forwarder])
         rvy = routing.Revery(db=hby.db, cues=cues)
 
-        clienter = Clienter()
-        oobiery = Oobiery(hby=hby, clienter=clienter, rvy=rvy)
+        clienter = resourceing.BoundedClienter()
+        oobiery = resourceing.BoundedOobiery(hby=hby, clienter=clienter, rvy=rvy)
 
         rep = storing.Respondant(hby=hby, mbx=self.mbx, aids=self.aids)
 
