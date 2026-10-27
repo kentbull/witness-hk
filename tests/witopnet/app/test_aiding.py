@@ -643,20 +643,34 @@ def test_encrypting_totp(multipart):
         assert counting.Counter(qb64b=atc).code == counting.CtrDex_2_0.WitnessIdxSigs
 
 
-def test_receipts_post_and_get_follow_stored_v2_event_version(multipart):
-    """Receipts should keep a v2 event's body version on both POST and GET."""
+@pytest.mark.parametrize(
+    "version,genus",
+    (
+        (kering.Vrsn_1_0, kering.Vrsn_1_0),
+        (kering.Vrsn_1_0, kering.Vrsn_2_0),
+        (kering.Vrsn_2_0, kering.Vrsn_2_0),
+    ),
+)
+def test_receipts_post_and_get_follow_stored_event_version(multipart, version, genus):
+    """Keep receipt body and attachments usable by the event's protocol peer.
+
+    Parameters:
+        multipart: existing real HTTP form fixture for hosted registration.
+        version: controller protocol and receipt framing.
+        genus: input attachment framing, including native-wrapped v1.
+    """
     with (
         habbing.openHab(
             name="bob-v2",
             salt=b"0123456789febob2",
-            version=kering.Vrsn_2_0,
+            version=version,
             kind=eventing.Kinds.json,
         ) as (_, bobHab),
         habbing.openHab(
             name="wan-v2",
             transferable=False,
             salt=b"0123456789fecba2",
-            version=kering.Vrsn_2_0,
+            version=version,
             kind=eventing.Kinds.json,
         ) as (_, wanHab),
         _open_witery(wanHab) as witery,
@@ -676,7 +690,9 @@ def test_receipts_post_and_get_follow_stored_v2_event_version(multipart):
         bob_wit = rep_w.json["eid"]
         witness = witery.wits[bob_wit]
 
-        body, headers = multipart.create(dict(kel=bobHab.msgOwnEvent(sn=0)))
+        body, headers = multipart.create(
+            dict(kel=bobHab.msgOwnEvent(sn=0, gvrsn=genus))
+        )
         headers[CESR_DESTINATION_HEADER] = bob_wit
         rep_a = client.simulate_post(path="/aids", body=body, headers=headers)
         assert rep_a.status == falcon.HTTP_200
@@ -685,9 +701,9 @@ def test_receipts_post_and_get_follow_stored_v2_event_version(multipart):
         raw_code = coring.Matter(qb64=bobHab.decrypt(matter.raw)).raw
         totp = pyotp.TOTP(raw_code)
 
-        # Submit a real v2 rotation so the witness stores a fully witnessed
+        # Submit a real rotation so the witness stores a fully witnessed
         # event and returns an immediate receipt in the same event version.
-        rot = bobHab.rotate(adds=[bob_wit], version=kering.Vrsn_2_0)
+        rot = bobHab.rotate(adds=[bob_wit], version=version, gvrsn=genus)
         rot_serder = serdering.SerderKERI(raw=rot)
         rep_post = _simulate_cesr_post(
             client,
@@ -698,7 +714,7 @@ def test_receipts_post_and_get_follow_stored_v2_event_version(multipart):
         )
         assert rep_post.status == falcon.HTTP_200
         post_rct = serdering.SerderKERI(raw=rep_post.content)
-        assert kering.deversify(post_rct.ked["v"]).pvrsn.major == 2
+        assert kering.deversify(post_rct.ked["v"]).pvrsn == version
 
         row_wigs = witness.hab.db.wigs.get(
             keys=(bobHab.pre.encode("utf-8"), rot_serder.saidb)
@@ -706,7 +722,7 @@ def test_receipts_post_and_get_follow_stored_v2_event_version(multipart):
         assert len(row_wigs) >= 1
 
         # Lookup by sequence number and by said should both reconstruct the
-        # same stored v2 receipt body while framing witness signatures in v2.
+        # same stored receipt body and protocol-compatible witness signatures.
         hdrs = {CESR_DESTINATION_HEADER: bob_wit}
         rep_by_sn = client.simulate_get(
             "/receipts",
@@ -718,10 +734,10 @@ def test_receipts_post_and_get_follow_stored_v2_event_version(multipart):
         rct_by_sn = serdering.SerderKERI(raw=rep_by_sn.content)
         assert rct_by_sn.ked["t"] == "rct"
         assert rct_by_sn.sn == 1
-        assert kering.deversify(rct_by_sn.ked["v"]).pvrsn.major == 2
+        assert kering.deversify(rct_by_sn.ked["v"]).pvrsn == version
         atc_by_sn = rep_by_sn.content[len(rct_by_sn.raw) :]
         assert (
-            counting.Counter(qb64b=atc_by_sn).code == counting.CtrDex_2_0.WitnessIdxSigs
+            counting.Counter(qb64b=atc_by_sn, version=version).name == "WitnessIdxSigs"
         )
 
         rep_by_said = client.simulate_get(
@@ -733,4 +749,9 @@ def test_receipts_post_and_get_follow_stored_v2_event_version(multipart):
         rct_by_said = serdering.SerderKERI(raw=rep_by_said.content)
         assert rct_by_said.ked["t"] == "rct"
         assert rct_by_said.ked["d"] == rot_serder.said
-        assert kering.deversify(rct_by_said.ked["v"]).pvrsn.major == 2
+        assert kering.deversify(rct_by_said.ked["v"]).pvrsn == version
+
+        # Parse and verify the receipt as the actual controller peer would.
+        bobHab.psr.parseOne(ims=bytearray(rep_post.content), version=version)
+        wigs = bobHab.db.wigs.get(keys=(bobHab.pre.encode(), rot_serder.saidb))
+        assert len(wigs) == 1

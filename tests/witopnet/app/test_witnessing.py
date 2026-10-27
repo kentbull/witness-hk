@@ -79,7 +79,7 @@ def test_setup_keeps_config_dir_out_of_witopnet_db_path():
         patch.object(witnessing, "Witnessery", return_value=MagicMock(name="witery")),
         patch.object(
             witnessing, "createHttpServer", return_value=MagicMock(name="server")
-        ),
+        ) as mock_create_server,
         patch.object(
             witnessing.http, "ServerDoer", return_value=MagicMock(name="server-doer")
         ),
@@ -102,6 +102,10 @@ def test_setup_keeps_config_dir_out_of_witopnet_db_path():
     mock_configer.assert_called_once_with(
         name="witopnet", headDirPath="/tmp/config-root", temp=False
     )
+    assert [
+        (entry.kwargs["host"], entry.kwargs["port"])
+        for entry in mock_create_server.call_args_list
+    ] == [("127.0.0.1", 5631), ("127.0.0.1", 5632)]
 
 
 def test_oobi_closed_witness_db_returns_not_found():
