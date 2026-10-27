@@ -1,4 +1,5 @@
 """Select supported HTTP attachment framing without accepting protocol evidence."""
+
 from keri import kering
 from keri.core import Counter
 
@@ -26,7 +27,7 @@ def attachmentVersion(serder, attachments):
             if counter.name in ("AttachmentGroup", "BigAttachmentGroup"):
                 # Legacy -C denotes receipt couples, whose first item is an
                 # AID, not another counter. Do not reinterpret that valid foot.
-                nested = attachments[len(counter.qb64b):]
+                nested = attachments[len(counter.qb64b) :]
                 if nested[:1] == b"-":
                     return kering.Vrsn_2_0
         except kering.KeriError:

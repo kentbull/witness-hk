@@ -115,8 +115,16 @@ def setup(
     dbDoer = BaserDoer(db)
     cf = configing.Configer(name=db.name, headDirPath=headDirPath, temp=temp)
     qrycues = decking.Deck()
-    witery = Witnessery(db=db, base=base, temp=temp, qrycues=qrycues, cf=cf,
-                        host=host, port=port, headDirPath=headDirPath)
+    witery = Witnessery(
+        db=db,
+        base=base,
+        temp=temp,
+        qrycues=qrycues,
+        cf=cf,
+        host=host,
+        port=port,
+        headDirPath=headDirPath,
+    )
 
     doers = [witery]
 

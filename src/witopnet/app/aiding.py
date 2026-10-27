@@ -104,11 +104,11 @@ class AidCollectionEnd:
         # legacy profile. Only the ordinary parser can authenticate either.
         if delkel is not None:
             delegator = serdering.SerderKERI(raw=bytes(delkel))
-            genus = attachmentVersion(delegator, delkel[delegator.size:])
+            genus = attachmentVersion(delegator, delkel[delegator.size :])
             witness.parser.parse(delkel, local=False, version=genus)
 
         serder = serdering.SerderKERI(raw=bytes(kel))
-        genus = attachmentVersion(serder, kel[serder.size:])
+        genus = attachmentVersion(serder, kel[serder.size :])
         witness.parser.parseOne(ims=kel, local=False, version=genus)
 
         if serder.pre not in witness.hab.kevers:  # Not a valid, signed inception event
