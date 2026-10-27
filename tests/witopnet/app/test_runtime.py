@@ -1,4 +1,5 @@
 """Exercise the installed hosted-witness process and management API."""
+
 import json
 import os
 import socket
@@ -29,29 +30,54 @@ def test_installed_marshal_provisions_with_actual_advertised_port(tmp_path):
         public = port()
     logfile = tmp_path / "marshal.log"
     with logfile.open("wb") as log:
-        proc = subprocess.Popen(["witopnet", "marshal", "start", "--base", "runtime-" + uuid4().hex,
-            "--bootport", str(boot), "--http", str(public), "--config-dir", str(tmp_path)],
-            env={**os.environ, "HOME": str(tmp_path)}, stdout=log, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(
+            [
+                "witopnet",
+                "marshal",
+                "start",
+                "--base",
+                "runtime-" + uuid4().hex,
+                "--bootport",
+                str(boot),
+                "--http",
+                str(public),
+                "--config-dir",
+                str(tmp_path),
+            ],
+            env={**os.environ, "HOME": str(tmp_path)},
+            stdout=log,
+            stderr=subprocess.STDOUT,
+        )
         try:
             deadline = time.monotonic() + 15
             while True:
                 if proc.poll() is not None:
                     raise AssertionError(logfile.read_text())
                 try:
-                    with urlopen(f"http://127.0.0.1:{boot}/health", timeout=.3) as response:
+                    with urlopen(
+                        f"http://127.0.0.1:{boot}/health", timeout=0.3
+                    ) as response:
                         assert response.status == 204
                     break
                 except OSError:
                     if time.monotonic() > deadline:
                         raise AssertionError(logfile.read_text())
-                    time.sleep(.05)
-            with openHab(name="runtime-controller", version=kering.Vrsn_2_0) as (_, hab):
-                request = Request(f"http://127.0.0.1:{boot}/witnesses",
-                    data=json.dumps({"aid": hab.pre}).encode(), headers={"Content-Type": "application/json"})
+                    time.sleep(0.05)
+            with openHab(name="runtime-controller", version=kering.Vrsn_2_0) as (
+                _,
+                hab,
+            ):
+                request = Request(
+                    f"http://127.0.0.1:{boot}/witnesses",
+                    data=json.dumps({"aid": hab.pre}).encode(),
+                    headers={"Content-Type": "application/json"},
+                )
                 with urlopen(request, timeout=5) as response:
                     record = json.load(response)
                 assert record["cid"] == hab.pre
-                assert record["oobis"] == [f"http://127.0.0.1:{public}/oobi/{record['eid']}/controller"]
+                assert record["oobis"] == [
+                    f"http://127.0.0.1:{public}/oobi/{record['eid']}/controller"
+                ]
                 with urlopen(record["oobis"][0], timeout=5) as response:
                     assert response.status == 200
                     assert response.read()

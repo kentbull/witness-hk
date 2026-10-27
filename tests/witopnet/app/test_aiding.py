@@ -643,11 +643,14 @@ def test_encrypting_totp(multipart):
         assert counting.Counter(qb64b=atc).code == counting.CtrDex_2_0.WitnessIdxSigs
 
 
-@pytest.mark.parametrize("version,genus", (
-    (kering.Vrsn_1_0, kering.Vrsn_1_0),
-    (kering.Vrsn_1_0, kering.Vrsn_2_0),
-    (kering.Vrsn_2_0, kering.Vrsn_2_0),
-))
+@pytest.mark.parametrize(
+    "version,genus",
+    (
+        (kering.Vrsn_1_0, kering.Vrsn_1_0),
+        (kering.Vrsn_1_0, kering.Vrsn_2_0),
+        (kering.Vrsn_2_0, kering.Vrsn_2_0),
+    ),
+)
 def test_receipts_post_and_get_follow_stored_event_version(multipart, version, genus):
     """Keep receipt body and attachments usable by the event's protocol peer.
 
@@ -687,7 +690,9 @@ def test_receipts_post_and_get_follow_stored_event_version(multipart, version, g
         bob_wit = rep_w.json["eid"]
         witness = witery.wits[bob_wit]
 
-        body, headers = multipart.create(dict(kel=bobHab.msgOwnEvent(sn=0, gvrsn=genus)))
+        body, headers = multipart.create(
+            dict(kel=bobHab.msgOwnEvent(sn=0, gvrsn=genus))
+        )
         headers[CESR_DESTINATION_HEADER] = bob_wit
         rep_a = client.simulate_post(path="/aids", body=body, headers=headers)
         assert rep_a.status == falcon.HTTP_200
