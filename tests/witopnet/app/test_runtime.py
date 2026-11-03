@@ -8,8 +8,17 @@ import time
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
-from keri import kering
-from keri.app.habbing import openHab
+import pyotp
+import pytest
+from keri import core, kering
+from keri.acdc import Regery, Registrar
+from keri.app.httping import (
+    CESR_ATTACHMENT_HEADER,
+    CESR_CONTENT_TYPE,
+    CESR_DESTINATION_HEADER,
+)
+from keri.app.habbing import openHby
+from keri.help import helping
 
 
 def port():
@@ -19,11 +28,15 @@ def port():
         return sock.getsockname()[1]
 
 
-def test_installed_marshal_provisions_with_actual_advertised_port(tmp_path):
-    """Start without a config block and provision through the real boot API.
+@pytest.mark.parametrize("key_count", [1, 2])
+def test_installed_marshal_provisions_with_actual_advertised_port(
+    tmp_path, multipart, key_count
+):
+    """Provision, authorize and verify a native registry anchor over real HTTP.
 
     Parameters:
         tmp_path: pytest-owned home/config/log directory in Linux image storage.
+        multipart: existing multipart encoder; key_count: controller key threshold.
     """
     boot, public = port(), port()
     while public == boot:
@@ -63,10 +76,14 @@ def test_installed_marshal_provisions_with_actual_advertised_port(tmp_path):
                     if time.monotonic() > deadline:
                         raise AssertionError(logfile.read_text())
                     time.sleep(0.05)
-            with openHab(name="runtime-controller", version=kering.Vrsn_2_0) as (
-                _,
-                hab,
-            ):
+            with openHby(name="runtime-controller", version=kering.Vrsn_2_0) as hby:
+                hab = hby.makeHab(
+                    name="runtime-controller",
+                    icount=key_count,
+                    ncount=key_count,
+                    isith=key_count,
+                    nsith=key_count,
+                )
                 request = Request(
                     f"http://127.0.0.1:{boot}/witnesses",
                     data=json.dumps({"aid": hab.pre}).encode(),
@@ -80,7 +97,78 @@ def test_installed_marshal_provisions_with_actual_advertised_port(tmp_path):
                 ]
                 with urlopen(record["oobis"][0], timeout=5) as response:
                     assert response.status == 200
-                    assert response.read()
+                    introduction = response.read()
+                assert introduction
+                hby.psr.parse(ims=bytearray(introduction), local=False)
+                assert record["eid"] in hby.kevers
+                body, headers = multipart.create(
+                    dict(kel=hab.msgOwnInception(gvrsn=kering.Vrsn_2_0))
+                )
+                headers[CESR_DESTINATION_HEADER] = record["eid"]
+                endpoint = f"http://127.0.0.1:{public}"
+                with urlopen(
+                    Request(endpoint + "/aids", data=body, headers=headers), timeout=5
+                ) as response:
+                    registration = json.load(response)
+                encrypted = (
+                    registration["totps"] if key_count > 1 else [registration["totp"]]
+                )
+                assert len(encrypted) == key_count
+                codes = [
+                    core.Matter(
+                        qb64b=hab.decrypt(
+                            core.Cipher(qb64=cipher).raw, verfers=[verfer]
+                        )
+                    ).raw
+                    for cipher, verfer in zip(encrypted, hab.kever.verfers)
+                ]
+                assert all(code == codes[0] for code in codes)
+                totp = pyotp.TOTP(codes[-1].decode())
+                rgy = Regery(hby, temp=True)
+                try:
+                    registry = Registrar(rgy).makeRegistry("runtime", hab.pre)
+                    rip = rgy.store.event(registry.regk)
+                    wire = hab.rotate(
+                        adds=[record["eid"]],
+                        toad=1,
+                        data=[dict(i=rip.said, s="0", d=rip.said)],
+                        version=kering.Vrsn_2_0,
+                        gvrsn=kering.Vrsn_2_0,
+                    )
+                    anchor = core.SerderKERI(raw=wire)
+                    headers = {
+                        "Content-Type": CESR_CONTENT_TYPE,
+                        CESR_ATTACHMENT_HEADER: wire[anchor.size :].decode(),
+                        CESR_DESTINATION_HEADER: record["eid"],
+                    }
+                    with urlopen(
+                        Request(
+                            endpoint + "/receipts", data=anchor.raw, headers=headers
+                        ),
+                        timeout=5,
+                    ) as response:
+                        assert (
+                            response.status == 202
+                        ), "unauthorized submission must not authorize hosted witnessing"
+                    headers["Authorization"] = f"{totp.now()}#{helping.nowIso8601()}"
+                    with urlopen(
+                        Request(
+                            endpoint + "/receipts", data=anchor.raw, headers=headers
+                        ),
+                        timeout=5,
+                    ) as response:
+                        assert response.status == 200
+                        receipt = response.read()
+                    parsed = core.SerderKERI(raw=receipt)
+                    assert parsed.pre == hab.pre and parsed.sn == anchor.sn
+                    assert parsed.sad["d"] == anchor.said
+                    hby.psr.parse(ims=bytearray(receipt), local=False)
+                    assert hby.db.fullyWitnessed(anchor)
+                    rgy.processEscrows()
+                    assert rgy.store.seqEvent(rip.said, 0).raw == rip.raw
+                    assert rgy.store.anchor(rip.said)[1].qb64 == anchor.said
+                finally:
+                    rgy.close()
         finally:
             proc.terminate()
             proc.wait(timeout=10)
