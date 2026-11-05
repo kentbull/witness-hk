@@ -13,14 +13,69 @@ import pyotp
 import pytest
 from falcon import testing
 from hio.base import doing
+from hio.help import decking
 from keri import core, kering
-from keri.app import forwarding, habbing
+from keri.app import forwarding, habbing, storing
 from keri.app.httping import CESR_DESTINATION_HEADER
+from keri.db import dbing
 from keri.help import helping
 from keri.peer import exchanging
 
-from witopnet.app.indirecting import HttpEnd, KeyLogEnd, KeyStateEnd
+from witopnet.app.indirecting import (
+    HttpEnd,
+    KeyLogEnd,
+    KeyStateEnd,
+    QryRpyMailboxIterable,
+)
 from witopnet.core import basing, witnessing
+
+
+def test_mailbox_queries_progress_in_reverse_cue_order():
+    with (
+        habbing.openHab(name="mailbox", version=kering.Vrsn_2_0) as (_, hab),
+        dbing.openLMDB(cls=storing.Mailboxer) as mbx,
+    ):
+        queries = [
+            core.query(
+                pre=hab.pre,
+                route="mbx",
+                query={"pre": hab.pre, "topics": {"/credential": idx}},
+                version=kering.Vrsn_2_0,
+                kind=kering.Kinds.json,
+            )
+            for idx in range(4)
+        ]
+        cues = decking.Deck(
+            dict(
+                kin="stream",
+                serder=query,
+                pre=hab.pre,
+                topics=dict(query.ked["q"]["topics"]),
+            )
+            for query in queries
+        )
+        unrelated = list(cues)[2:]
+        first, second = (
+            QryRpyMailboxIterable(cues=cues, mbx=mbx, said=query.said)
+            for query in queries[:2]
+        )
+        for msg in (b"first", b"second"):
+            mbx.storeMsg(topic=f"{hab.pre}/credential", msg=msg)
+
+        # Scheduling against cue order must not keep swapping the two cues.
+        for stream in (second, first):
+            assert next(stream) == b""
+            assert stream.iter is not None
+            assert next(stream) == b"retry: 5000\n\n"
+
+        assert next(second) == (
+            b"id: 1\nevent: /credential\nretry: 5000\ndata: second\n\n"
+        )
+        assert next(first) == (
+            b"id: 0\nevent: /credential\nretry: 5000\ndata: first\n\n"
+            b"id: 1\nevent: /credential\nretry: 5000\ndata: second\n\n"
+        )
+        assert list(cues) == unrelated
 
 
 @pytest.fixture

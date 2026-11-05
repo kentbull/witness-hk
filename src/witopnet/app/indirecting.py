@@ -377,8 +377,9 @@ class QryRpyMailboxIterable:
             bytes: next server-sent event chunk, or ``b""`` while waiting
         """
         if self.iter is None:
-            if self.cues:
-                cue = self.cues.pull()  # self.cues.popleft()
+            # Scan once so waiting streams cannot keep swapping each other's cues.
+            for _ in range(len(self.cues)):
+                cue = self.cues.pull()
                 serder = cue["serder"]
                 if serder.said == self.said:
                     kin = cue["kin"]
@@ -391,6 +392,7 @@ class QryRpyMailboxIterable:
                                 retry=self.retry,
                             )
                         )
+                    break
                 else:
                     self.cues.append(cue)
 
