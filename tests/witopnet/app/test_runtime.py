@@ -32,7 +32,7 @@ def port():
 def test_installed_marshal_provisions_with_actual_advertised_port(
     tmp_path, multipart, key_count
 ):
-    """Provision, authorize and verify a native registry anchor over real HTTP.
+    """Provision, authorize and verify a v2 registry anchor over real HTTP.
 
     Parameters:
         tmp_path: pytest-owned home/config/log directory in Linux image storage.

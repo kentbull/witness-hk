@@ -5,7 +5,7 @@ from keri.core import Counter
 
 
 def attachmentVersion(serder, attachments):
-    """Select native framing or a legacy event's explicitly native signature foot.
+    """Select v2 framing or a legacy event's explicitly v2 signature foot.
 
     Parameters:
         serder: parsed KERI body whose protocol version supplies the default.
@@ -14,7 +14,7 @@ def attachmentVersion(serder, attachments):
         Versionage: the genus passed to the ordinary core parser.
 
     Existing hosted clients wrap v1 bodies in v2 attachment groups; released v1
-    clients use v1 groups. The distinct native attachment/controller-signature
+    clients use v1 groups. The distinct v2 attachment/controller-signature
     counter names identify that existing transport profile. This function only
     selects a parser table: the core still verifies complete framing, signatures
     and event state. It performs no trial processing or accepted-state writes.
