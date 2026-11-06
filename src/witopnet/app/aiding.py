@@ -26,9 +26,9 @@ class AidCollectionEnd:
     """AID authentication registration endpoint (POST /aids).
 
     Accepts a controller's KEL inception event along with an optional TOTP
-    secret, verifies the inception event, stores the TOTP seed as plaintext,
-    and returns it encrypted to the controller's public key(s) along with the
-    witness OOBI URL. The seed is encrypted only in transit.
+    secret, verifies the inception event, encrypts a TOTP code with both the
+    witness's and the controller's public keys, and returns the encrypted code
+    and the witness OOBI URL to the caller.
     """
 
     def __init__(self, witery):
@@ -129,8 +129,17 @@ class AidCollectionEnd:
         if secret is not None:
             code = secret
 
-        # Store the seed as plaintext; it is encrypted only in transit below
-        witness.addCode(code=code)
+        # Create a Ciper from our own Hab to save the code encrypted
+        verfer = witness.hab.kever.verfers[0]
+        if verfer.code not in (coring.MtrDex.Ed25519N, coring.MtrDex.Ed25519):
+            raise ValueError(
+                "Unsupported verkey derivation code = {}." "".format(verfer.code)
+            )
+        encrypter = core.Encrypter(verkey=verfer.qb64b)
+
+        seedqb64b = coring.Matter(raw=code, code=coring.MtrDex.Ed25519_Seed).qb64b
+        cipher = encrypter.encrypt(ser=seedqb64b)
+        witness.addCode(code=cipher)
 
         # Now generate the encrypted code to send to the originator of the call
         kever = witness.hab.kevers[serder.pre]
