@@ -204,9 +204,12 @@ def test_http_put_requires_valid_auth_for_locally_witnessed_events(
         assert witness.hab.kevers[controller.pre].sn == 0
 
         secret = b"JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"
+        # A seed stored encrypted to the witness's own key by an earlier version
+        # is migrated to plaintext on first use.
         encrypter = core.Encrypter(verkey=witness.hab.kever.verfers[0].qb64b)
         seed = core.Matter(raw=secret, code=core.MtrDex.Ed25519_Seed)
-        witness.addCode(encrypter.encrypt(ser=seed.qb64b))
+        keys = (controller.pre, witness.hab.pre)
+        witness.witery.db.codes.pin(keys=keys, val=encrypter.encrypt(ser=seed.qb64b))
         now = helping.nowUTC()
         totp = pyotp.TOTP(secret)
         valid = totp.at(now)
@@ -238,6 +241,8 @@ def test_http_put_requires_valid_auth_for_locally_witnessed_events(
         assert response.status_code == 204
         assert witness.hab.kevers[controller.pre].sn == 1
         assert witness.hab.kevers[controller.pre].serder.pvrsn == version
+        assert witness.witery.db.seeds.get(keys=keys) == secret.decode()
+        assert witness.witery.db.codes.get(keys=keys) is None
 
         interaction = controller.interact(gvrsn=kering.Vrsn_2_0)
         response = client.simulate_put("/", body=interaction, headers=headers)

@@ -584,25 +584,44 @@ class Witness(doing.DoDoer):
         return oobis
 
     def addCode(self, code):
-        """Persist an encrypted TOTP code for this witness/controller pair.
+        """Persist the plaintext TOTP seed for this witness/controller pair.
 
-        The code is keyed by ``(controller AID, witness AID)`` in the
-        ``codes`` sub-database of :class:`~witopnet.core.basing.Baser`.
+        The seed is keyed by ``(controller AID, witness AID)`` in the ``seeds``
+        sub-database of :class:`~witopnet.core.basing.Baser`. It is encrypted
+        only in transit, in the registration response to the controller.
 
         Parameters:
-            code (Cipher): encrypted TOTP secret to store.
+            code (bytes): base32 TOTP secret to store.
         """
         cid = self.aids[0]
-        self.witery.db.codes.pin(keys=(cid, self.hab.pre), val=code)
+        self.witery.db.seeds.pin(keys=(cid, self.hab.pre), val=code)
 
     def getCode(self):
-        """Retrieve the encrypted TOTP code for this witness/controller pair.
+        """Retrieve the plaintext TOTP seed for this witness/controller pair.
+
+        A seed stored by an earlier version, encrypted to this witness's own
+        key, is decrypted and rewritten as plaintext once.
 
         Returns:
-            Cipher | None: the stored encrypted TOTP code, or ``None`` if not yet set.
+            bytes | None: the TOTP secret, or ``None`` if not yet set.
         """
-        cid = self.aids[0]
-        return self.witery.db.codes.get(keys=(cid, self.hab.pre))
+        keys = (self.aids[0], self.hab.pre)
+        if (seed := self.witery.db.seeds.get(keys=keys)) is not None:
+            return seed.encode("utf-8")
+        if (cipher := self.witery.db.codes.get(keys=keys)) is None:
+            return None
+        try:
+            plain = self.hab.decrypt(ser=cipher.raw)
+        except Exception as ex:
+            raise kering.ValidationError(
+                f"Stored TOTP code for witness {self.hab.pre} cannot be decrypted; "
+                "the controller must re-register (re-run onboarding or "
+                "kli witness authenticate)."
+            ) from ex
+        seed = coring.Matter(qb64b=plain).raw
+        self.witery.db.seeds.pin(keys=keys, val=seed)
+        self.witery.db.codes.rem(keys=keys)
+        return seed
 
 
 class WitnessCollectionEnd:

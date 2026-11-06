@@ -26,7 +26,10 @@ class Baser(dbing.LMDBer):
     Extends the base KERI LMDBer with three sub-databases:
         - ``wits``: witness records keyed by witness AID
         - ``cids``: controller-AID-to-witness-AID index
-        - ``codes``: encrypted TOTP codes keyed by (controller AID, witness AID)
+        - ``seeds``: plaintext base32 TOTP seeds keyed by (controller AID, witness AID);
+          seeds are encrypted only in transit, in the registration response
+        - ``codes``: legacy TOTP seeds encrypted to the witness's own key, migrated
+          to ``seeds`` on first use
     """
 
     TailDirPath = "keri/witopnet"
@@ -43,6 +46,7 @@ class Baser(dbing.LMDBer):
         """
         self.wits = None
         self.cids = None
+        self.seeds = None
         self.codes = None
 
         super(Baser, self).__init__(
@@ -60,7 +64,9 @@ class Baser(dbing.LMDBer):
         )
         # Controller AID to witness AID index
         self.cids = subing.IoSetSuber(db=self, subkey="cids.")
-        # Witness to project index key is Witness prefix val is Project SAID
+        # Plaintext TOTP seed keyed by (controller AID, witness AID)
+        self.seeds = subing.Suber(db=self, subkey="seeds.")
+        # Legacy encrypted seeds, read only to migrate them into seeds
         self.codes = subing.CesrSuber(db=self, subkey="codes.", klas=core.Cipher)
 
         return self.env
