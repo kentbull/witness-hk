@@ -102,7 +102,7 @@ class AidCollectionEnd:
         ):  # The form works but still raises this exception so ignore for now...
             pass
 
-        # Registration accepts legacy framing and the existing native-wrapped
+        # Registration accepts legacy framing and the existing v2-wrapped
         # legacy profile. Only the ordinary parser can authenticate either.
         if delkel is not None:
             delegator = serdering.SerderKERI(raw=bytes(delkel))

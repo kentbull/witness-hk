@@ -657,7 +657,7 @@ def test_receipts_post_and_get_follow_stored_event_version(multipart, version, g
     Parameters:
         multipart: existing real HTTP form fixture for hosted registration.
         version: controller protocol and receipt framing.
-        genus: input attachment framing, including native-wrapped v1.
+        genus: input attachment framing, including v2-wrapped v1.
     """
     with (
         habbing.openHab(
