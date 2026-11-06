@@ -571,16 +571,9 @@ def test_encrypting_totp(multipart):
         m = coring.Matter(qb64=code)
         rcode = coring.Matter(qb64=bobHab.decrypt(m.raw)).raw
 
-        # Decrypt and load the code from the database with Wan's hab
-        cipher = safe.codes.get(
-            keys=(
-                bobHab.pre,
-                bobWit,
-            )
-        )
-        witHab = witness.hby.habs[bobWit]
-        plain = witHab.decrypt(ser=cipher.raw)
-        scode = coring.Matter(qb64b=plain).raw
+        # The witness stores the seed as plaintext; only the response is encrypted
+        scode = safe.seeds.get(keys=(bobHab.pre, bobWit)).encode("utf-8")
+        assert safe.codes.get(keys=(bobHab.pre, bobWit)) is None
 
         # Compare that the codes are the same.
         assert rcode == scode

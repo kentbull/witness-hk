@@ -19,7 +19,7 @@ from hio.help import decking
 from keri import help, kering
 from keri.app import httping
 from keri.app.httping import CESR_DESTINATION_HEADER
-from keri.core import eventing, coring, serdering
+from keri.core import eventing, serdering
 from keri.core.coring import Ilks
 from keri.core.eventing import reply
 from keri.help import helping
@@ -245,10 +245,7 @@ class HttpEnd:
         msg = bytearray(serder.raw)
         msg.extend(cr.attachments.encode("utf-8"))
 
-        if (cipher := witness.getCode()) is not None:
-
-            plain = witness.hab.decrypt(ser=cipher.raw)
-            scode = coring.Matter(qb64b=plain).raw
+        if (scode := witness.getCode()) is not None:
             # Check for a one-time-password in the Authorization header. If it
             # succeeds, parse this event as locally authenticated.
             if (auth := req.get_header("Authorization")) is not None and validCode(
@@ -332,9 +329,7 @@ class HttpEnd:
 
         msg = bytearray(req.bounded_stream.read())
         local = False
-        if (cipher := witness.getCode()) is not None:
-            plain = witness.hab.decrypt(ser=cipher.raw)
-            scode = coring.Matter(qb64b=plain).raw
+        if (scode := witness.getCode()) is not None:
             if (auth := req.get_header("Authorization")) is not None:
                 local = validCode(scode, auth)
 
@@ -524,13 +519,10 @@ class ReceiptEnd:
                 description=f"invalid AID={pre} for witnessing receipting"
             )
 
-        if (cipher := witness.getCode()) is None:
+        if (scode := witness.getCode()) is None:
             raise falcon.HTTPPreconditionFailed(
                 description=f"AID={pre} not initialized with 2-factor code"
             )
-
-        plain = witness.hab.decrypt(ser=cipher.raw)
-        scode = coring.Matter(qb64b=plain).raw
 
         ilk = serder.ked["t"]
         if ilk not in (Ilks.icp, Ilks.rot, Ilks.ixn, Ilks.dip, Ilks.drt):
