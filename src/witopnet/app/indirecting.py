@@ -7,7 +7,6 @@ simple indirect mode demo support classes
 """
 
 import datetime
-import os
 import time
 
 from witopnet.core.framing import attachmentVersion
@@ -56,10 +55,10 @@ class WitnessStart(doing.DoDoer):
         self.cues = cues if cues is not None else decking.Deck()
 
         doers = [
-            doing.doify(self.start),
-            doing.doify(self.msgDo),
-            doing.doify(self.escrowDo),
-            doing.doify(self.cueDo),
+            doing.doify(self.start, tock=0.0),
+            doing.doify(self.msgDo, tock=hab.tocks["witnessMsg"]),
+            doing.doify(self.escrowDo, tock=hab.tocks["witnessEscrow"]),
+            doing.doify(self.cueDo, tock=hab.tocks["witnessCue"]),
         ]
         super().__init__(doers=doers, **opts)
 
@@ -73,11 +72,10 @@ class WitnessStart(doing.DoDoer):
 
         """
         self.wind(tymth)
-        self.tock = tock
-        _ = yield self.tock
+        _ = yield tock
 
         while not self.hab.inited:
-            yield self.tock
+            yield tock
 
         logger.info(f"Witness {self.hab.name} : {self.hab.pre}")
 
@@ -95,8 +93,7 @@ class WitnessStart(doing.DoDoer):
             add result of doify on this method to doers list
         """
         self.wind(tymth)
-        self.tock = tock
-        _ = yield self.tock
+        _ = yield tock
 
         if self.parser.ims:
             logger.info(
@@ -121,9 +118,7 @@ class WitnessStart(doing.DoDoer):
             add result of doify on this method to doers list
         """
         self.wind(tymth)
-        self.tock = tock
-        _ = yield self.tock
-        escrowTock = float(os.getenv("WITOPNET_ESCROW_TOCK", "0.5"))
+        _ = yield tock
 
         while True:
             self.kvy.processEscrows()
@@ -132,7 +127,7 @@ class WitnessStart(doing.DoDoer):
                 self.tvy.processEscrows()
             self.exc.processEscrow()
 
-            yield escrowTock
+            yield tock
 
     def cueDo(self, tymth=None, tock=0.0, **kwa):
         """
@@ -153,8 +148,7 @@ class WitnessStart(doing.DoDoer):
             add result of doify on this method to doers list
         """
         self.wind(tymth)
-        self.tock = tock
-        _ = yield self.tock
+        _ = yield tock
 
         while True:
             while self.cues:
@@ -164,8 +158,8 @@ class WitnessStart(doing.DoDoer):
                     self.queries.append(cue)
                 else:
                     self.responses.append(cue)
-                yield self.tock
-            yield self.tock
+                yield tock
+            yield tock
 
 
 class HttpEnd:
